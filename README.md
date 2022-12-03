@@ -151,13 +151,30 @@ This is why snapshots can be created so fast and easily in btrfs. A snapshot sub
 Update repos and upgrade packages:
 
 ```
-pacman -Syu
+apt update && apt upgrade
 ```
 
-Install packages:
+Install snapper, borg, and borgmatic:
 
 ```
-pacman -S snapper snap-pac grub-btrfs borg borgmatic
+apt install snapper borgbackup borgmatic
+```
+
+Install grub-btrfs:
+
+```
+git clone https://github.com/Antynea/grub-btrfs.git
+cd grub-btrfs
+make install
+```
+
+Install snap-apt:
+
+```
+git clone https://github.com/pavinjosdev/snap-apt.git
+chmod 755 snap-apt/scripts/snap-apt.py
+cp snap-apt/scripts/snap-apt.py /usr/bin/
+cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 ```
 
 ---
