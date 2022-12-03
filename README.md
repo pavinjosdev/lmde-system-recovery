@@ -239,27 +239,31 @@ Snapper automatically creates a `.snapshots` directory inside the directory it's
 For the above config for root it will be at `/.snapshots`.
 But we don't need it as we'll create an empty directory of same name/path for our `@snapshots` subvolume to be mounted at.
 
-Delete the `.snapshots` directory snapper created at `/`
+Delete the `.snapshots` directory snapper created at `/` and at `/home`
 
 ```
 rm -rI /.snapshots
+rm -rI /home/.snapshots
 ```
 
-Create the directory anew
+Create the directories anew
 
 ```
 mkdir /.snapshots
+mkdir /home/.snapshots
 ```
 
-Mount btrfs partition and create new subvolume
+Mount btrfs partition and create new subvolumes
 
 ```
-mount -t btrfs /dev/sda2 /mnt
+mount -t btrfs /dev/lvmlmde/root /mnt
 btrfs subvolume create /mnt/@snapshots
+btrfs subvolume create /mnt/@home-snapshots
+btrfs subvolume list /mnt
 umount /mnt
 ```
 
-Automatically mount the `@snapshots` subvolume at `/.snapshots`
+Automatically mount the snapshots subvolumes:
 
 File: `/etc/fstab`
 
@@ -282,13 +286,14 @@ UUID=831cc5b9-7c99-459c-8b25-0db765c5ce3b swap           swap    defaults,noatim
 tmpfs                                     /tmp           tmpfs   defaults,noatime,mode=1777 0 0
 
 # Snapshots
-UUID=63745996-340f-4bda-98b1-63af36e6cdae  /.snapshots  btrfs  subvol=/@snapshots,defaults,noatime,space_cache,compress=lzo 0 0
+UUID=63745996-340f-4bda-98b1-63af36e6cdae  /.snapshots  btrfs  subvol=@snapshots,defaults,noatime,compress=zstd,discard=async 0 0
+UUID=63745996-340f-4bda-98b1-63af36e6cdae  /home/.snapshots  btrfs  subvol=@home-snapshots,defaults,noatime,compress=zstd,discard=async 0 0
 ```
 
 Mount all partitions listed in `/etc/fstab`:
 
 ```
-mount -a
+mount -av
 ```
 
 ---
@@ -347,13 +352,15 @@ ro=false
 Generate grub configuration manually once:
 
 ```
-grub-mkconfig -o /boot/grub/grub.cfg
+update-grub
 ```
 
 To automatically update grub menu entries on detecting changes in `/.snapshots` directory, the `grub-btrfs` package provides a systemd script:
 
 ```
-systemctl enable grub-btrfs.path
+systemctl enable grub-btrfsd
+systemctl restart grub-btrfsd
+systemctl status grub-btrfsd
 ```
 
 ---
