@@ -193,19 +193,26 @@ Create a snapper config for root subvolume mounted at `/`
 snapper -c root create-config /
 ```
 
-Modify the snapper config, the defaults are probably fine.
-
-File: `/etc/snapper/configs/root`
-
-You may create other snapper configs as needed, for example for `/home` but it will not be covered here as we're backing up `/home` offsite
-
-Enable systemd timer to have snapper create a snapshot on each boot:
+You may create other snapper configs as needed, for example for `/home` like so:
 
 ```
-systemctl enable snapper-boot.timer
+snapper -c home create-config /home
 ```
 
-Backup non-btrfs partition `/boot` on initramfs updates
+List snapper configs:
+
+```
+snapper list-configs
+```
+
+Modify the snapper configs, the defaults are probably fine.
+
+```
+nano /etc/snapper/configs/root
+nano /etc/snapper/configs/home
+```
+
+Backup non-btrfs partition `/boot` on kernel/initramfs updates
 
 File: `/etc/initramfs/post-update.d/backup_boot`
 
