@@ -172,8 +172,8 @@ Install snap-apt:
 
 ```
 git clone https://github.com/pavinjosdev/snap-apt.git
-chmod 755 snap-apt/scripts/snap-apt.py
-cp snap-apt/scripts/snap-apt.py /usr/bin/
+chmod 755 snap-apt/scripts/snap_apt.py
+cp snap-apt/scripts/snap_apt.py /usr/bin/
 cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 ```
 
