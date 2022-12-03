@@ -1,3 +1,9 @@
+# WIP
+
+Work in progress
+
+---
+
 # LMDE system recovery using btrfs and snapshots - from broken OS or hardware failure to a fully functional system.
 
 This guide is written for [LMDE](https://linuxmint.com/download_lmde.php) but can be easily adapted for any Debian/Ubuntu based system, and less easily for any other Linux based system. The concepts are the same irrespective of distribution.
