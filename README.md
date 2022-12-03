@@ -172,6 +172,7 @@ Install grub-btrfs:
 git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
 make install
+apt install inotify-tools
 ```
 
 Install snap-apt:
@@ -179,7 +180,7 @@ Install snap-apt:
 ```
 git clone https://github.com/pavinjosdev/snap-apt.git
 chmod 755 snap-apt/scripts/snap_apt.py
-cp snap-apt/scripts/snap_apt.py /usr/bin/
+cp snap-apt/scripts/snap_apt.py /usr/bin/snap-apt
 cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 ```
 
