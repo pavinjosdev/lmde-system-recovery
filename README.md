@@ -8,6 +8,8 @@ Work in progress
 
 This guide is written for [LMDE](https://linuxmint.com/download_lmde.php) but can be easily adapted for any Debian/Ubuntu based system, and less easily for any other Linux based system. The concepts are the same irrespective of distribution.
 
+A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found [here](https://github.com/pavinjosdev/eos-system-recovery/).
+
 ---
 
 # Goals
