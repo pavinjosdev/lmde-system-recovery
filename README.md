@@ -43,7 +43,7 @@ This is optional, but provides the same disk/partition layout as used in this ar
 apt update
 apt install git
 git clone https://github.com/pavinjosdev/lmde-live-installer.git
-cp -r lmde-live-installer/usr/* /usr
+cp -a lmde-live-installer/usr/* /usr
 ```
 
 3. Run the installer in normal mode from the desktop icon or by running the command `/usr/bin/live-installer`
