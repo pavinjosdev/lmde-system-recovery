@@ -32,6 +32,31 @@ A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found
 
 ---
 
+# LMDE installation
+
+This is optional, but provides the same disk/partition layout as used in this article.
+
+1. Boot into LMDE live installer
+2. Patch files that haven't been upstreamed yet (for automated installation to btrfs root)
+
+```
+apt update
+apt install git
+git clone https://github.com/pavinjosdev/lmde-live-installer.git
+cp -r lmde-live-installer/usr/* /usr
+```
+
+3. Run the installer in normal mode from the desktop icon or by running the command `/usr/bin/live-installer`
+
+> Alternately, run the command `/usr/bin/live-installer-expert-mode` for expert mode installation to self prepared `/target` mountpoint with self creation of fstab, crypttab, etc.
+
+4. In the disk partitioning page, choose automated install and check the options:
+
+- LUKS encryption & LVM
+- Btrfs
+
+---
+
 # Disk topology
 
 > For ease of setup, this guide assumes you're `root`. Be careful and read twice before executing any commands!
