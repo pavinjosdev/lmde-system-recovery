@@ -738,13 +738,12 @@ Move backup data into its subvolumes:
 mv /mnt/@.fresh/root/backup/* /mnt
 btrfs subvolume create @
 btrfs subvolume create @home
-btrfs subvolume create @log
-btrfs subvolume create @cache
-btrfs subvolume create @snapshots
+btrfs subvolume create @var-log
+btrfs subvolume create @var-cache
 mv -T @.latest @
 mv -T @home.latest @home
-mv -T @log.latest @log
-mv -T @cache.latest @cache
+mv -T @var-log.latest @var-log
+mv -T @var-cache.latest @var-cache
 ```
 
 Edit `/mnt/@/etc/fstab` with UUID of new EFI, btrfs and swap partitions:
