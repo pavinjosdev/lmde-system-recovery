@@ -746,7 +746,7 @@ mv -T @var-log.latest @var-log
 mv -T @var-cache.latest @var-cache
 ```
 
-Edit `/mnt/@/etc/fstab` with UUID of new EFI, btrfs and swap partitions:
+Edit `/mnt/@/etc/fstab` with UUID of new boot, EFI, btrfs and swap partitions:
 
 ```
 lsblk -f
@@ -760,8 +760,6 @@ Edit `/etc/default/grub` with UUID of new swap partition (for hibernation resume
 update-grub
 ```
 
-Reboot system.
-
 Optional: Delete unneeded btrfs subvolumes.
 
-<!-- THE END-->
+<!-- THE END -->
