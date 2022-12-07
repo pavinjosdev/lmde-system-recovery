@@ -762,4 +762,10 @@ update-grub
 
 Optional: Delete unneeded btrfs subvolumes.
 
+---
+
+Here's a cute picture of *Butters* from *South Park.*
+
+![Butters from South Park looks pleased at hearing about btrfs](https://i.imgur.com/UvG9wCq.png)
+
 <!-- THE END -->
