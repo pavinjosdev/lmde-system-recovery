@@ -400,7 +400,7 @@ snapper -c root list
 List all subvolumes:
 
 ```
-root@mint-laptop:~# btrfs sub list / | grep -v '/snapshot'
+root@mint-laptop:~# btrfs subvolume list /
 ID 521 gen 17875 top level 5 path @
 ID 257 gen 17875 top level 5 path @home
 ID 258 gen 17874 top level 5 path @var-log
@@ -745,13 +745,6 @@ mv -T @.latest @
 mv -T @home.latest @home
 mv -T @log.latest @log
 mv -T @cache.latest @cache
-```
-
-Copy `/boot` dir from `@.fresh` to `@`:
-
-```
-mv /mnt/@/boot /mnt/@/boot.fresh
-cp -a /mnt/@.fresh/boot /mnt/@
 ```
 
 Edit `/mnt/@/etc/fstab` with UUID of new EFI, btrfs and swap partitions:
