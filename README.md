@@ -1,12 +1,6 @@
-# WIP
-
-Work in progress
-
----
-
 # LMDE system recovery using btrfs and snapshots - from broken OS or hardware failure to a fully functional system.
 
-This guide is written for [LMDE](https://linuxmint.com/download_lmde.php) but can be easily adapted for any Debian/Ubuntu based system, and less easily for any other Linux based system. The concepts are the same irrespective of distribution.
+This guide is written for [Linux Mint Debian Edition](https://linuxmint.com/download_lmde.php) but can be easily adapted for any Debian/Ubuntu based system, and less easily for any other Linux based system. The concepts are the same irrespective of distribution.
 
 A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found [here](https://github.com/pavinjosdev/eos-system-recovery/).
 
@@ -14,6 +8,7 @@ A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found
 
 # Goals
 
+- Encrypted root and swap (for hibernation) partitions.
 - Fast incremental snapshots of whole system that can be restored easily in the event of a broken OS.
 - Offsite backup of snapshots that can be restored easily in the event of hardware failure.
 
@@ -23,7 +18,7 @@ A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found
 
 # Tools / technologies
 
-- [Btrfs](https://btrfs.wiki.kernel.org/index.php/Main_Page) ("Butter" FS): CoW filesystem with super fast snapshots
+- [Btrfs](https://btrfs.wiki.kernel.org/index.php/Main_Page) ("Butter" FS): CoW (copy-on-write) filesystem with super fast snapshots
 - [snapper](http://snapper.io/): automatic creation & management of btrfs snapshots
 - [snap-apt](https://github.com/pavinjosdev/snap-apt): automatic creation of pre/post btrfs snapshots on package changes when using APT (Debian package manager)
 - [grub-btrfs](https://github.com/Antynea/grub-btrfs): include btrfs snapshots in grub (bootloader) menu options
@@ -34,10 +29,12 @@ A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found
 
 # LMDE installation
 
-This is optional, but provides the same disk/partition layout as used in this article.
+This is optional, but provides the same disk/partition layout used in this article.
+
+## Automated install
 
 1. Boot into LMDE live installer
-2. Patch files that haven't been upstreamed yet (for automated installation to btrfs root)
+2. Patch files that haven't been upstreamed yet
 
 ```
 apt update
@@ -48,12 +45,145 @@ cp -a lmde-live-installer/usr/* /usr
 
 3. Run the installer in normal mode from the desktop icon or by running the command `/usr/bin/live-installer`
 
-> Alternately, run the command `/usr/bin/live-installer-expert-mode` for expert mode installation to self prepared `/target` mountpoint with self creation of fstab, crypttab, etc.
-
 4. In the disk partitioning page, choose automated install and check the options:
 
 - LUKS encryption & LVM
 - Btrfs
+
+## Manual install
+
+- Boot into LMDE live installer
+
+- Fire up the terminal using Ctrl+Alt+T.
+
+```
+# Setup partitions on physical disk
+fdisk /dev/nvme0n1
+# Partition 1 of size 286M and type EFI system
+# Partition 2 of size 944M and type Linux filesystem
+# Partition 3 of size (rest of disk space) and type Linux filesystem
+
+# Format partition 1 as vfat for /boot/efi (ESP)
+mkfs.vfat -F32 /dev/nvme0n1p1
+
+# Format partition 2 as ext4 for /boot
+mkfs.ext4 /dev/nvme0n1p2
+
+# Setup LUKS encryption on partition 3
+cryptsetup luksFormat /dev/nvme0n1p3
+cryptsetup open /dev/nvme0n1p3 lvmlmde
+cryptsetup status lvmlmde
+ls /dev/mapper
+
+# Setup logical volumes (LVs) to hold root and swap partitions
+pvcreate /dev/mapper/lvmlmde
+pvs
+vgcreate lvmlmde /dev/mapper/lvmlmde
+vgs
+lvcreate -L231.25G -nroot lvmlmde
+lvcreate -L6G -nswap lvmlmde
+lvs
+ls /dev/mapper
+ls /dev/lvmlmde
+lsblk -f /dev/nvme0n1
+
+# Format new LVs
+mkswap /dev/lvmlmde/swap
+mkfs.btrfs /dev/lvmlmde/root
+
+# Create btrfs subvolumes
+mount /dev/lvmlmde/root /mnt
+cd /mnt
+btrfs sub cr @
+btrfs sub cr @home
+btrfs sub cr @var-log
+btrfs sub cr @var-cache
+btrfs sub cr @snapshots
+btrfs sub cr @home-snapshots
+btrfs sub list /mnt
+umount /mnt
+```
+
+- Start LMDE GUI installer in expert mode with the command `/usr/bin/live-installer-expert-mode`, proceed with GUI installer and choose "Expert Mode" in partitioning window.
+
+- Prepare `/target` for LMDE GUI installer
+
+```
+mkdir /target
+mkdir -p /target/home
+mkdir -p /target/var/log
+mkdir -p /target/var/cache
+mkdir -p /target/.snapshots
+mkdir -p /target/home/.snapshots
+
+mkdir -p /target/boot
+mount /dev/nvme0n1p2 /target/boot
+
+mkdir -p /target/boot/efi
+mount /dev/nvme0n1p1 /target/boot/efi
+
+mount -o subvol=@,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target
+mount -o subvol=@home,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/home
+mount -o subvol=@var-log,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/log
+mount -o subvol=@var-cache,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/cache
+```
+
+- Setup fstab, crypttab and a few other things for LMDE GUI installer
+
+```
+# Get UUID of partitions
+lsblk -f /dev/nvme0n1
+```
+
+File: `/etc/fstab`
+
+Contents:
+
+```
+tmpfs  /tmp  tmpfs  defaults,noatime  0  0
+# /dev/mapper/lvmlmde-root
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /  btrfs  subvol=@,defaults,noatime,compress=zstd,discard=async  0  1
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /home  btrfs  subvol=@home,defaults,noatime,compress=zstd,discard=async  0  2
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /var/log  btrfs  subvol=@var-log,defaults,noatime,compress=zstd,discard=async  0  2
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /var/cache  btrfs  subvol=@var-cache,defaults,noatime,compress=zstd,discard=async  0  2
+# /dev/mapper/lvmlmde-swap
+UUID=d8294c05-4570-4a78-9eaa-382c05d7040d none   swap sw 0 0
+# /dev/nvme0n1p2
+UUID=c2f96f90-db58-4700-abbd-7aff8dd07929 /boot  ext4 defaults 0 1
+# /dev/nvme0n1p1
+UUID=4429-E99B /boot/efi  vfat defaults 0 1
+
+# Snapshots
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /.snapshots  btrfs  subvol=@snapshots,defaults,noatime,compress=zstd,discard=async  0  0
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /home/.snapshots  btrfs  subvol=@home-snapshots,defaults,noatime,compress=zstd,discard=async  0  0
+```
+
+File: `/etc/crypttab`
+
+Contents:
+
+```
+# <target name>	<source device>		<key file>	<options>
+lvmlmde   UUID=a911c0df-4acf-4af4-aba1-376af138db8f   none   luks,discard,tries=3
+```
+
+Modify parameter in `/etc/default/grub`
+
+```
+GRUB_CMDLINE_LINUX="cryptdevice=UUID=a911c0df-4acf-4af4-aba1-376af138db8f:lvmlmde root=/dev/mapper/lvmlmde-root resume=/dev/mapper/lvmlmde-swap"
+```
+
+Add the following modules to `/etc/initramfs-tools/modules`
+
+```
+aes-i586
+aes_x86_64
+dm-crypt
+dm-mod
+xts
+```
+
+- Proceed to finish LMDE GUI installation.
 
 ---
 
@@ -64,41 +194,23 @@ cp -a lmde-live-installer/usr/* /usr
 Disk and partitions:
 
 ```
-[root@eos-laptop ~]# parted -l
-Model: ATA KINGSTON SV300S3 (scsi)
-Disk /dev/sda: 120GB
-Sector size (logical/physical): 512B/512B
-Partition Table: gpt
-Disk Flags:  
-
-Number  Start   End    Size    File system     Name  Flags
-1      2097kB  539MB  537MB   fat32                 boot, esp
-2      539MB   111GB  110GB   btrfs           root  legacy_boot
-3      111GB   120GB  9449MB  linux-swap(v1)        swap
-```
-
-```
-[root@eos-laptop ~]# lsblk /dev/sda
-NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-sda      8:0    0 111.8G  0 disk
-├─sda1   8:1    0   512M  0 part /boot/efi
-├─sda2   8:2    0 102.5G  0 part /home
-│                                /var/log
-│                                /var/cache
-│                                /
-└─sda3   8:3    0   8.8G  0 part [SWAP]
+root@mint-laptop:~# lsblk -f
+NAME               FSTYPE      FSVER    LABEL UUID                                   FSAVAIL FSUSE% MOUNTPOINT
+nvme0n1                                                                                             
+├─nvme0n1p1        vfat        FAT32          4429-E99B                                 282M     1% /boot/efi
+├─nvme0n1p2        ext4        1.0            c2f96f90-db58-4700-abbd-7aff8dd07929    737.5M    15% /boot
+└─nvme0n1p3        crypto_LUKS 2              a911c0df-4acf-4af4-aba1-376af138db8f                  
+  └─lvmlmde        LVM2_member LVM2 001       9tglX3-L9FP-ASNE-nibs-T2Ev-Id7e-im2TZh                
+    ├─lvmlmde-root btrfs                      992e4b8c-7de1-4a94-a2cc-079b69bbadd7      224G     2% /home/.snapshots
+    └─lvmlmde-swap swap        1              d8294c05-4570-4a78-9eaa-382c05d7040d                  [SWAP]
 ```
 
 It's not required to have the exact aforementioned layout, but knowing the disk/partition topology would make following this guide easier.
 
-We're naturally interested in the btrfs partition: `/dev/sda2`
+We're naturally interested in the btrfs partition: `/dev/lvmlmde/root`. Ignore the mountpoint for it as `lsblk` is showing the last mount configured in fstab, btrfs can mount each "subvolume" to different mountpoints. This is covered in the next section.
 
-Get the properties including UUID (universally unique identifier) of `/dev/sda2`:
-
-```
-[root@eos-laptop ~]# blkid /dev/sda2
-/dev/sda2: UUID="63745996-340f-4bda-98b1-63af36e6cdae" UUID_SUB="c52df0d3-929a-4f2e-b980-5035036125e0" BLOCK_SIZE="4096" TYPE="btrfs" PARTLABEL="root" PARTUUID="a1969063-479c-3042-9a63-68560d5f5e23"
-```
+Note that since we've encrypted root and swap partitions, the entire physical partition `/dev/nvme0n1p3` is encrypted using [LUKS](https://en.wikipedia.org/wiki/Linux_Unified_Key_Setup).
+The root and swap partitions residing in it are [logical volumes](https://en.wikipedia.org/wiki/Logical_Volume_Manager_(Linux)).
 
 ---
 
@@ -120,53 +232,57 @@ For the purpose of this guide it's important to understand Btrfs _subvolume_ and
 Here's the filesystem layout we'll be implementing:
 
 ```
-<subvol>        <mountpoint>
-@               /
-@home           /home
-@log            /var/log
-@cache          /var/cache
-@snapshots      /.snapshots
+<subvol>            <mountpoint>
+@                   /
+@home               /home
+@var-log            /var/log
+@var-cache          /var/cache
+@snapshots          /.snapshots
+@home-snapshots     /home/.snapshots
 ```
 
 Listing current subvolumes:
 
 ```
-[root@eos-laptop ~]# btrfs subvolume list /
-ID 276 gen 1629 top level 5 path @
-ID 277 gen 1629 top level 5 path @home
-ID 278 gen 1629 top level 5 path @log
-ID 279 gen 910 top level 5 path @cache
+root@mint-laptop:~# btrfs subvolume list
+ID 521 gen 17840 top level 5 path @
+ID 257 gen 17841 top level 5 path @home
+ID 258 gen 17841 top level 5 path @var-log
+ID 259 gen 17635 top level 5 path @var-cache
+ID 268 gen 17765 top level 5 path @snapshots
+ID 269 gen 17763 top level 5 path @home-snapshots
 ```
 
 Manually mount the btrfs partition to see what's inside:
 
 ```
-# Mount partition /dev/sda2 at /mnt, here we're explicitly mentioning the type as btrfs. It would probably work without it as well!
-[root@eos-laptop ~]# mount -t btrfs /dev/sda2 /mnt
-
-[root@eos-laptop ~]# cd /mnt
-
-[root@eos-laptop mnt]# ls
-@  @cache  @home  @log
-
-[root@eos-laptop mnt]# ls @
-bin  boot  dev  etc  home  lib  lib64  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
-
-[root@eos-laptop mnt]# ls @cache
-ldconfig  man  pacman  private
-
-[root@eos-laptop mnt]# ls @home
+# Mount partition /dev/lvmlmde/root at /mnt
+root@mint-laptop:~# mount /dev/lvmlmde/root /mnt
+root@mint-laptop:~# cd /mnt
+root@mint-laptop:/mnt# ls
+@  @home  @home-snapshots  @snapshots  @var-cache  @var-log
+root@mint-laptop:/mnt# ls @
+bin   dev  home        initrd.img.old  lib32  libx32  mnt  proc  run   srv  tmp  var	  vmlinuz.old
+boot  etc  initrd.img  lib	       lib64  media   opt  root  sbin  sys  usr  vmlinuz
+root@mint-laptop:/mnt# ls @home
 pavin
+root@mint-laptop:/mnt# ls @var-cache
+apparmor  apt	    cups     dictionaries-common  fwupd     ldconfig  man	  pm-utils  samba
+app-info  cracklib  debconf  fontconfig		  fwupdmgr  lightdm   PackageKit  private
+root@mint-laptop:/mnt# ls @var-log
+alternatives.log  cups						   faillog	   messages		  snap-apt.log	     Xorg.0.log
+apt		  daemon.log					   fontconfig.log  mintsystem.log	  snapper.log	     Xorg.0.log.old
+aptitude	  debian-system-adjustments-adjust-grub-title.log  hp		   mintsystem.timestamps  speech-dispatcher
+auth.log	  debian-system-adjustments-start.log		   journal	   openvpn		  syslog
+boot.log	  debian-system-adjustments-stop.log		   kern.log	   private		  ufw.log
+bootstrap.log	  debug						   lastlog	   runit		  user.log
+btmp		  dpkg.log					   lightdm	   samba		  wtmp
 
 # Unmount
-[root@eos-laptop ~]# umount /mnt
+root@mint-laptop:~# umount /mnt
 ```
 
-EndeavourOS creates these subvolumes automatically when choosing to install on a btrfs partition, we'll create the `@snapshots` subvolume manually later.
-
 [Source](https://btrfs.wiki.kernel.org/index.php/SysadminGuide#Subvolumes)
-
-Whew! That was a handful to digest, but don't worry if you don't immediately get it, you'll understand it better once we implement it.
 
 ## Copy on Write (CoW)
 
@@ -197,7 +313,7 @@ Install grub-btrfs:
 
 ```
 apt install inotify-tools
-git clone https://github.com/pavinjosdev/grub-btrfs
+git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
 make install
 ```
@@ -261,71 +377,6 @@ chmod 755 /etc/initramfs/post-update.d/backup_boot
 
 ---
 
-# Configure btrfs snapshots
-
-Snapper automatically creates a `.snapshots` directory inside the directory it's snapshotting.
-For the above config for root it will be at `/.snapshots`.
-But we don't need it as we'll create an empty directory of same name/path for our `@snapshots` subvolume to be mounted at.
-
-Delete the `.snapshots` directory snapper created at `/` and at `/home`
-
-```
-rm -rI /.snapshots
-rm -rI /home/.snapshots
-```
-
-Create the directories anew
-
-```
-mkdir /.snapshots
-mkdir /home/.snapshots
-```
-
-Mount btrfs partition and create new subvolumes
-
-```
-mount -t btrfs /dev/lvmlmde/root /mnt
-btrfs subvolume create /mnt/@snapshots
-btrfs subvolume create /mnt/@home-snapshots
-btrfs subvolume list /mnt
-umount /mnt
-```
-
-Automatically mount the snapshots subvolumes:
-
-File: `/etc/fstab`
-
-Contents:
-
-```
-# /etc/fstab: static file system information.
-#
-# Use 'blkid' to print the universally unique identifier for a device; this may
-# be used with UUID= as a more robust way to name devices that works even if
-# disks are added and removed. See fstab(5).
-#
-# <file system>             <mount point>  <type>  <options>  <dump>  <pass>
-UUID=E199-B52A                            /boot/efi      vfat    umask=0077 0 2
-UUID=63745996-340f-4bda-98b1-63af36e6cdae /              btrfs   subvol=/@,defaults,noatime,space_cache,autodefrag,compress=lzo 0 1
-UUID=63745996-340f-4bda-98b1-63af36e6cdae /home          btrfs   subvol=/@home,defaults,noatime,space_cache,autodefrag,compress=lzo 0 2
-UUID=63745996-340f-4bda-98b1-63af36e6cdae /var/cache     btrfs   subvol=/@cache,defaults,noatime,space_cache,autodefrag,compress=lzo 0 2
-UUID=63745996-340f-4bda-98b1-63af36e6cdae /var/log       btrfs   subvol=/@log,defaults,noatime,space_cache,autodefrag,compress=lzo 0 2
-UUID=831cc5b9-7c99-459c-8b25-0db765c5ce3b swap           swap    defaults,noatime 0 0
-tmpfs                                     /tmp           tmpfs   defaults,noatime,mode=1777 0 0
-
-# Snapshots
-UUID=63745996-340f-4bda-98b1-63af36e6cdae  /.snapshots  btrfs  subvol=@snapshots,defaults,noatime,compress=zstd,discard=async 0 0
-UUID=63745996-340f-4bda-98b1-63af36e6cdae  /home/.snapshots  btrfs  subvol=@home-snapshots,defaults,noatime,compress=zstd,discard=async 0 0
-```
-
-Mount all partitions listed in `/etc/fstab`:
-
-```
-mount -av
-```
-
----
-
 # Create a manual snapshot
 
 Check if everything works by creating a manual snapshot:
@@ -349,12 +400,13 @@ snapper -c root list
 List all subvolumes:
 
 ```
-[root@eos-laptop mnt]# btrfs subvolume list /
-ID 276 gen 1987 top level 5 path @
-ID 277 gen 1987 top level 5 path @home
-ID 278 gen 1987 top level 5 path @log
-ID 279 gen 1987 top level 5 path @cache
-ID 290 gen 1987 top level 5 path @snapshots
+root@mint-laptop:~# btrfs sub list / | grep -v '/snapshot'
+ID 521 gen 17875 top level 5 path @
+ID 257 gen 17875 top level 5 path @home
+ID 258 gen 17874 top level 5 path @var-log
+ID 259 gen 17851 top level 5 path @var-cache
+ID 268 gen 17765 top level 5 path @snapshots
+ID 269 gen 17763 top level 5 path @home-snapshots
 ID 291 gen 349 top level 290 path @snapshots/1/snapshot
 ```
 
@@ -363,10 +415,10 @@ ID 291 gen 349 top level 290 path @snapshots/1/snapshot
 Get property of subvolume:
 
 ```
-[root@eos-laptop mnt]# btrfs property get /.snapshots/1/snapshot
+root@mint-laptop:~# btrfs property get /.snapshots/1/snapshot
 ro=true
 
-[root@eos-laptop mnt]# btrfs property get /
+root@mint-laptop:~# btrfs property get /
 ro=false
 ```
 
@@ -399,13 +451,13 @@ Power on or reboot the system.
 
 From the snapshot list, boot into the last functional snapshot. Make a mental note of the snapshot number.
 
-> The system should boot without issues as `/home`, `/var/log` and `/var/cache` are all read-write, only `/` will be read-only.
-> If the system does not boot from the snapshot, boot from a live USB.
+> The system should boot without issues as `/tmp`, `/var/log`,  `/var/cache`, `/home` are all read-write, only `/` will be read-only.
+> If the system does not boot from the snapshot, boot from a live image.
 
 Make sure we have booted into a read-only snapshot:
 
 ```
-[root@eos-laptop mnt]# btrfs property get /
+root@mint-laptop:~# btrfs property get /
 ro=true
 ```
 
@@ -422,7 +474,7 @@ As an example, we will proceed with restoration of root `/` (subvolume `@`) from
 Mount the btrfs partition to `/mnt`:
 
 ```
-mount -t btrfs /dev/sda2 /mnt
+mount -t btrfs -o defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /mnt
 ```
 
 Rename the `@` subvolume:
@@ -449,7 +501,7 @@ reboot
 Once rebooted, delete the `@.broken` subvolume:
 
 ```
-mount -t btrfs /dev/sda2 /mnt
+mount -t btrfs -o defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /mnt
 btrfs subvolume delete /mnt/@.broken
 umount /mnt
 ```
@@ -465,25 +517,24 @@ btrfs scrub status /
 
 # Check and repair btrfs filesystem
 
-Boot from a live USB
+Boot from a live image
 
 List all block devices:
 
 ```
-lsblk
-parted -l
+lsblk -f
 ```
 
 Check the unmounted btrfs filesystem:
 
 ```
-btrfs check /dev/sda2
+btrfs check /dev/lvmlmde/root
 ```
 
 Repairing an unmounted btrfs filesystem (DANGEROUS OPTION, see man page for `btrfs-check`):
 
 ```
-btrfs check --repair /dev/sda2
+btrfs check --repair /dev/lvmlmde/root
 ```
 
 ---
@@ -511,15 +562,15 @@ From local machine:
 
 ```
 ssh borg@remote-server.tld
-mkdir eos-laptop
+mkdir mint-laptop
 ```
 
-> In the previous command, `eos-laptop` refers to local machine's hostname and `remote-server.tld` refers to remote server's FQDN
+> In the previous command, `mint-laptop` refers to local machine's hostname and `remote-server.tld` refers to remote server's FQDN
 
 Initialize borg repository from local machine:
 
 ```
-borg init -e repokey borg@remote-server.tld:/home/borg/eos-laptop
+borg init -e repokey borg@remote-server.tld:/home/borg/mint-laptop
 ```
 
 > Make sure to securely backup the borg repo password as well as the private key created earlier.
@@ -540,11 +591,11 @@ location:
     source_directories:
         - /mnt/@.latest
         - /mnt/@home.latest
-        - /mnt/@log.latest
-        - /mnt/@cache.latest
+        - /mnt/@var-log.latest
+        - /mnt/@var-cache.latest
 
     repositories:
-        - borg@remote-server.tld:/home/borg/eos-laptop
+        - borg@remote-server.tld:/home/borg/mint-laptop
 
 storage:
     encryption_passphrase: "<your-borg-repo-password>"
@@ -555,24 +606,24 @@ retention:
 
 hooks:
     before_backup:
-        - mount /dev/sda2 /mnt
+        - mount /dev/lvmlmde/root /mnt
         - btrfs subvolume snapshot -r /mnt/@ /mnt/@.latest
         - btrfs subvolume snapshot -r /mnt/@home /mnt/@home.latest
-        - btrfs subvolume snapshot -r /mnt/@log /mnt/@log.latest
-        - btrfs subvolume snapshot -r /mnt/@cache /mnt/@cache.latest
+        - btrfs subvolume snapshot -r /mnt/@var-log /mnt/@var-log.latest
+        - btrfs subvolume snapshot -r /mnt/@var-cache /mnt/@var-cache.latest
 
     after_backup:
         - btrfs subvolume delete /mnt/@.latest
         - btrfs subvolume delete /mnt/@home.latest
-        - btrfs subvolume delete /mnt/@log.latest
-        - btrfs subvolume delete /mnt/@cache.latest
+        - btrfs subvolume delete /mnt/@var-log.latest
+        - btrfs subvolume delete /mnt/@var-cache.latest
         - umount /mnt
 
     on_error:
         - btrfs subvolume delete /mnt/@.latest
         - btrfs subvolume delete /mnt/@home.latest
-        - btrfs subvolume delete /mnt/@log.latest
-        - btrfs subvolume delete /mnt/@cache.latest
+        - btrfs subvolume delete /mnt/@var-log.latest
+        - btrfs subvolume delete /mnt/@var-cache.latest
         - umount /mnt
 ```
 
@@ -667,7 +718,8 @@ Reboot into live environment
 Mount btrfs partition:
 
 ```
-mount -t btrfs /dev/sda2 /mnt
+cryptsetup open /dev/nvme0n1p3 lvmlmde
+mount -t btrfs -o defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /mnt
 ```
 
 Rename existing subvolumes:
@@ -676,8 +728,8 @@ Rename existing subvolumes:
 cd /mnt
 mv @ @.fresh
 mv @home @home.fresh
-mv @log @log.fresh
-mv @cache @cache.fresh
+mv @var-log @var-log.fresh
+mv @var-cache @var-cache.fresh
 ```
 
 Move backup data into its subvolumes:
@@ -706,17 +758,14 @@ Edit `/mnt/@/etc/fstab` with UUID of new EFI, btrfs and swap partitions:
 
 ```
 lsblk -f
-blkid /dev/sda1
-blkid /dev/sda2
-blkid /dev/sda3
 ```
 
-Reboot back into OS. Use LTS kernel in case of any issues during boot.
+Reboot back into OS.
 
 Edit `/etc/default/grub` with UUID of new swap partition (for hibernation resume) and run:
 
 ```
-grub-mkconfig -o /boot/grub/grub.cfg
+update-grub
 ```
 
 Reboot system.
