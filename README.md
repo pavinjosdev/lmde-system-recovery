@@ -259,7 +259,7 @@ Here's the filesystem layout we'll be implementing:
 Listing current subvolumes:
 
 ```
-root@mint-laptop:~# btrfs subvolume list
+root@mint-laptop:~# btrfs subvolume list /
 ID 521 gen 17840 top level 5 path @
 ID 257 gen 17841 top level 5 path @home
 ID 258 gen 17841 top level 5 path @var-log
