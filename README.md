@@ -826,14 +826,11 @@ btrfs subvolume create @
 btrfs subvolume create @home
 btrfs subvolume create @var-log
 btrfs subvolume create @var-cache
-rsync -aH --progress @.latest/ @
-rsync -aH --progress @home.latest/ @home
-rsync -aH --progress @var-log.latest/ @var-log
-rsync -aH --progress @var-cache.latest/ @var-cache
-rmdir @.latest
-rmdir @home.latest
-rmdir @var-log.latest
-rmdir @var-cache.latest
+rsync -aH @.latest/ @
+rsync -aH @home.latest/ @home
+rsync -aH @var-log.latest/ @var-log
+rsync -aH @var-cache.latest/ @var-cache
+rm -rI @.latest @home.latest @var-log.latest @var-cache.latest
 ```
 
 - Edit `/mnt/@/etc/fstab` with UUID of new boot, EFI, btrfs and swap partitions
