@@ -130,12 +130,12 @@ mount -o subvol=@var-cache,defaults,noatime,compress=zstd,discard=async /dev/lvm
 root@mint:~# lsblk -f /dev/nvme0n1
 NAME               FSTYPE      FSVER    LABEL UUID                                   FSAVAIL FSUSE% MOUNTPOINT
 nvme0n1                                                                                             
-├─nvme0n1p1        vfat        FAT32          4429-E99B                                 282M     1% /boot/efi
-├─nvme0n1p2        ext4        1.0            c2f96f90-db58-4700-abbd-7aff8dd07929    737.5M    15% /boot
+├─nvme0n1p1        vfat        FAT32          4429-E99B                                 282M     1% 
+├─nvme0n1p2        ext4        1.0            c2f96f90-db58-4700-abbd-7aff8dd07929    737.5M    15% 
 └─nvme0n1p3        crypto_LUKS 2              a911c0df-4acf-4af4-aba1-376af138db8f                  
   └─lvmlmde        LVM2_member LVM2 001       9tglX3-L9FP-ASNE-nibs-T2Ev-Id7e-im2TZh                
-    ├─lvmlmde-root btrfs                      992e4b8c-7de1-4a94-a2cc-079b69bbadd7      224G     2% /home/.snapshots
-    └─lvmlmde-swap swap        1              d8294c05-4570-4a78-9eaa-382c05d7040d                  [SWAP]
+    ├─lvmlmde-root btrfs                      992e4b8c-7de1-4a94-a2cc-079b69bbadd7      224G     2% 
+    └─lvmlmde-swap swap        1              d8294c05-4570-4a78-9eaa-382c05d7040d                  
 ```
 
 File: `/etc/fstab`
