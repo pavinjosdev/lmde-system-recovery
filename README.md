@@ -34,7 +34,7 @@ This is optional, but provides the same disk/partition layout used in this artic
 ## Automated install
 
 1. Boot into LMDE live installer
-2. Patch files that haven't been upstreamed yet
+2. Patch files that haven't been upstreamed yet (open terminal using Ctrl+Alt+T)
 
 ```
 apt update
@@ -45,7 +45,7 @@ cp -a lmde-live-installer/usr/* /usr
 
 3. Run the installer in normal mode from the desktop icon or by running the command `/usr/bin/live-installer`
 
-4. In the disk partitioning page, choose automated install and check the options:
+4. In the "Installation type" window, choose "Automated installation" and check the options:
 
 - LVM
 - Encryption (LUKS)
@@ -100,12 +100,17 @@ btrfs sub cr @home
 btrfs sub cr @var-log
 btrfs sub cr @var-cache
 btrfs sub list /mnt
+cd ~
 umount /mnt
 ```
 
-- Start LMDE GUI installer in expert mode with the command `/usr/bin/live-installer-expert-mode`, proceed with GUI installer and choose "Expert Mode" in partitioning window.
+- Start LMDE GUI installer in expert mode with the command `/usr/bin/live-installer-expert-mode` and proceed with installation.
 
-- Prepare `/target` mountpoint for LMDE GUI installer
+- In the "Installation type" window, choose "Manual Partitioning".
+
+- In the "Partitioning" window, choose "Expert mode".
+
+- Prepare `/target` mountpoint:
 
 ```
 mkdir -p /target/boot
@@ -123,7 +128,7 @@ mount -o subvol=@var-log,defaults,noatime,compress=zstd,discard=async /dev/lvmlm
 mount -o subvol=@var-cache,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/cache
 ```
 
-- Setup fstab, crypttab and a few other things for LMDE GUI installer
+- Setup fstab, crypttab, and a few other things:
 
 ```
 root@mint:~# lsblk -f /dev/nvme0n1
