@@ -839,7 +839,7 @@ rm -rI @.latest @home.latest @var-log.latest @var-cache.latest
 - Edit `/mnt/@/etc/crypttab` with UUID of new LUKS partition
 - Edit `/mnt/@/etc/default/grub` or `/mnt/@/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
 
-Restore boot:
+Update kernel (optional, recommended):
 
 ```
 cd ~
@@ -864,12 +864,15 @@ mount /dev/nvme0n1p1 /target/boot/efi
 for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
 chroot /target
 
-rsync -aH /.bootbackup/ /boot
-
 mount -av
 
+rsync -a /boot /.boot.fresh
 update-grub
 update-initramfs -c -k all
+
+apt update
+apt purge linux-image-* linux-headers-*
+apt install linux-image-amd64 linux-headers-amd64
 ```
 
 Reboot back into restored OS.
