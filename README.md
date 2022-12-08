@@ -29,6 +29,8 @@ A similar guide written for [EndeavourOS](https://endeavouros.com/) can be found
 
 # LMDE installation
 
+> For ease of setup, this guide assumes you're `root`. Be careful and read twice before executing any commands!
+
 This is optional, but provides the same disk/partition layout used in this article.
 
 ## Automated install
@@ -203,8 +205,6 @@ xts
 ---
 
 # Disk topology
-
-> For ease of setup, this guide assumes you're `root`. Be careful and read twice before executing any commands!
 
 Disk and partitions:
 
