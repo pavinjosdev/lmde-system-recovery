@@ -264,18 +264,17 @@ ID 521 gen 17840 top level 5 path @
 ID 257 gen 17841 top level 5 path @home
 ID 258 gen 17841 top level 5 path @var-log
 ID 259 gen 17635 top level 5 path @var-cache
-ID 268 gen 17765 top level 5 path @snapshots
-ID 269 gen 17763 top level 5 path @home-snapshots
 ```
 
 Manually mount the btrfs partition to see what's inside:
 
 ```
-# Mount partition /dev/lvmlmde/root at /mnt
+# Mount btrfs partition at /mnt
 root@mint-laptop:~# mount /dev/lvmlmde/root /mnt
+
 root@mint-laptop:~# cd /mnt
 root@mint-laptop:/mnt# ls
-@  @home  @home-snapshots  @snapshots  @var-cache  @var-log
+@  @home  @var-cache  @var-log
 root@mint-laptop:/mnt# ls @
 bin   dev  home        initrd.img.old  lib32  libx32  mnt  proc  run   srv  tmp  var	  vmlinuz.old
 boot  etc  initrd.img  lib	       lib64  media   opt  root  sbin  sys  usr  vmlinuz
