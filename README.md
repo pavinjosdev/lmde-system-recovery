@@ -866,7 +866,7 @@ chroot /target
 
 mount -av
 
-rsync -a /boot /.boot.fresh
+rsync -a /boot/ /.boot.fresh
 update-grub
 update-initramfs -c -k all
 
