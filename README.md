@@ -837,7 +837,7 @@ rm -rI @.latest @home.latest @var-log.latest @var-cache.latest
 - Edit `/mnt/@/etc/crypttab` with UUID of new LUKS partition
 - Edit `/mnt/@/etc/default/grub` or `/mnt/@/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
 
-Update grub and initramfs:
+Restore boot:
 
 ```
 cd ~
@@ -861,6 +861,8 @@ mount /dev/nvme0n1p1 /target/boot/efi
 
 for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
 chroot /target
+
+rsync -aH /.bootbackup/ /boot
 
 update-grub
 update-initramfs -c -k all
