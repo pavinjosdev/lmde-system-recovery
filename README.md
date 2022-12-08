@@ -130,6 +130,8 @@ mkdir -p /target/boot/efi
 mount /dev/nvme0n1p1 /target/boot/efi
 ```
 
+- Proceed with installation.
+
 - Setup fstab, crypttab, and a few other things:
 
 ```
@@ -189,7 +191,7 @@ dm-mod
 xts
 ```
 
-- Proceed to finish LMDE GUI installation.
+- Proceed to finish installation.
 
 ---
 
