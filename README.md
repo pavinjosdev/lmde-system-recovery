@@ -837,7 +837,36 @@ rm -rI @.latest @home.latest @var-log.latest @var-cache.latest
 - Edit `/mnt/@/etc/crypttab` with UUID of new LUKS partition
 - Edit `/mnt/@/etc/default/grub` or `/mnt/@/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
 
-Reboot back into OS.
+Update grub and initramfs:
+
+```
+cd ~
+umount /mnt
+
+mkdir /target
+mount -o subvol=@,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target
+
+mkdir -p /target/home
+mkdir -p /target/var/log
+mkdir -p /target/var/cache
+mount -o subvol=@home,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/home
+mount -o subvol=@var-log,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/log
+mount -o subvol=@var-cache,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/cache
+
+mkdir -p /target/boot
+mount /dev/nvme0n1p2 /target/boot
+
+mkdir -p /target/boot/efi
+mount /dev/nvme0n1p1 /target/boot/efi
+
+for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
+chroot /target
+
+update-grub
+update-initramfs -c -k all
+```
+
+Reboot back into restored OS.
 
 Optional: Delete unneeded btrfs subvolumes.
 
