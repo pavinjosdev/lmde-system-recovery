@@ -832,19 +832,11 @@ mv -T @var-log.latest @var-log
 mv -T @var-cache.latest @var-cache
 ```
 
-Edit `/mnt/@/etc/fstab` with UUID of new boot, EFI, btrfs and swap partitions:
-
-```
-lsblk -f
-```
+- Edit `/mnt/@/etc/fstab` with UUID of new boot, EFI, btrfs and swap partitions
+- Edit `/mnt/@/etc/crypttab` with UUID of new LUKS partition
+- Edit `/etc/default/grub` or `/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
 
 Reboot back into OS.
-
-Edit `/etc/default/grub` with UUID of new swap partition (for hibernation resume) and run:
-
-```
-update-grub
-```
 
 Optional: Delete unneeded btrfs subvolumes.
 
