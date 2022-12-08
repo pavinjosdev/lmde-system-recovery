@@ -47,8 +47,9 @@ cp -a lmde-live-installer/usr/* /usr
 
 4. In the disk partitioning page, choose automated install and check the options:
 
-- LUKS encryption & LVM
-- Btrfs
+- LVM
+- Encryption (LUKS)
+- Format disk using btrfs
 
 ## Manual install
 
