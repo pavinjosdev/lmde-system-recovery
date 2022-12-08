@@ -104,20 +104,18 @@ umount /mnt
 
 - Start LMDE GUI installer in expert mode with the command `/usr/bin/live-installer-expert-mode`, proceed with GUI installer and choose "Expert Mode" in partitioning window.
 
-- Prepare `/target` for LMDE GUI installer
+- Prepare `/target` mountpoint for LMDE GUI installer
 
 ```
-mkdir /target
-mkdir -p /target/home
-mkdir -p /target/var/log
-mkdir -p /target/var/cache
-
 mkdir -p /target/boot
 mount /dev/nvme0n1p2 /target/boot
 
 mkdir -p /target/boot/efi
 mount /dev/nvme0n1p1 /target/boot/efi
 
+mkdir -p /target/home
+mkdir -p /target/var/log
+mkdir -p /target/var/cache
 mount -o subvol=@,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target
 mount -o subvol=@home,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/home
 mount -o subvol=@var-log,defaults,noatime,compress=zstd,discard=async /dev/lvmlmde/root /target/var/log
