@@ -826,6 +826,8 @@ btrfs subvolume create @
 btrfs subvolume create @home
 btrfs subvolume create @var-log
 btrfs subvolume create @var-cache
+btrfs subvolume create @snapshots
+btrfs subvolume create @home-snapshots
 rsync -aH @.latest/ @
 rsync -aH @home.latest/ @home
 rsync -aH @var-log.latest/ @var-log
@@ -864,8 +866,6 @@ chroot /target
 
 rsync -aH /.bootbackup/ /boot
 
-mkdir /.snapshots
-mkdir /home/.snapshots
 mount -av
 
 update-grub
