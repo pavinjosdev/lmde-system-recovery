@@ -326,7 +326,7 @@ apt install snapper borgbackup borgmatic
 Install grub-btrfs:
 
 ```
-apt install inotify-tools
+apt install git inotify-tools
 git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
 make install
