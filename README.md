@@ -864,6 +864,10 @@ chroot /target
 
 rsync -aH /.bootbackup/ /boot
 
+mkdir /.snapshots
+mkdir /home/.snapshots
+mount -av
+
 update-grub
 update-initramfs -c -k all
 ```
