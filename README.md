@@ -518,6 +518,7 @@ Generate grub configuration manually once:
 
 ```
 update-grub
+/etc/grub.d/41_snapshots-btrfs
 ```
 
 To automatically update grub menu entries on detecting changes in `/.snapshots` directory, the `grub-btrfs` package provides a systemd script:
