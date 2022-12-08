@@ -135,7 +135,7 @@ mount /dev/nvme0n1p1 /target/boot/efi
 - Chroot into new system:
 
 ```
-for i in /dev /dev/pts /proc /run /sys; do mount -B $i /mnt$i; done
+for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
 chroot /target
 ```
 
