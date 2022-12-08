@@ -81,8 +81,8 @@ pvcreate /dev/mapper/lvmlmde
 pvs
 vgcreate lvmlmde /dev/mapper/lvmlmde
 vgs
-lvcreate -L231.25G -nroot lvmlmde
-lvcreate -L6G -nswap lvmlmde
+lvcreate -L 6G -n swap lvmlmde
+lvcreate -l 100%FREE -n root lvmlmde
 lvs
 ls /dev/mapper
 ls /dev/lvmlmde
