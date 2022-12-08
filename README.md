@@ -98,8 +98,6 @@ btrfs sub cr @
 btrfs sub cr @home
 btrfs sub cr @var-log
 btrfs sub cr @var-cache
-btrfs sub cr @snapshots
-btrfs sub cr @home-snapshots
 btrfs sub list /mnt
 umount /mnt
 ```
@@ -113,8 +111,6 @@ mkdir /target
 mkdir -p /target/home
 mkdir -p /target/var/log
 mkdir -p /target/var/cache
-mkdir -p /target/.snapshots
-mkdir -p /target/home/.snapshots
 
 mkdir -p /target/boot
 mount /dev/nvme0n1p2 /target/boot
@@ -131,8 +127,15 @@ mount -o subvol=@var-cache,defaults,noatime,compress=zstd,discard=async /dev/lvm
 - Setup fstab, crypttab and a few other things for LMDE GUI installer
 
 ```
-# Get UUID of partitions
-lsblk -f /dev/nvme0n1
+root@mint:~# lsblk -f /dev/nvme0n1
+NAME               FSTYPE      FSVER    LABEL UUID                                   FSAVAIL FSUSE% MOUNTPOINT
+nvme0n1                                                                                             
+├─nvme0n1p1        vfat        FAT32          4429-E99B                                 282M     1% /boot/efi
+├─nvme0n1p2        ext4        1.0            c2f96f90-db58-4700-abbd-7aff8dd07929    737.5M    15% /boot
+└─nvme0n1p3        crypto_LUKS 2              a911c0df-4acf-4af4-aba1-376af138db8f                  
+  └─lvmlmde        LVM2_member LVM2 001       9tglX3-L9FP-ASNE-nibs-T2Ev-Id7e-im2TZh                
+    ├─lvmlmde-root btrfs                      992e4b8c-7de1-4a94-a2cc-079b69bbadd7      224G     2% /home/.snapshots
+    └─lvmlmde-swap swap        1              d8294c05-4570-4a78-9eaa-382c05d7040d                  [SWAP]
 ```
 
 File: `/etc/fstab`
@@ -140,6 +143,7 @@ File: `/etc/fstab`
 Contents:
 
 ```
+# Static filesystem information
 tmpfs  /tmp  tmpfs  defaults,noatime  0  0
 # /dev/mapper/lvmlmde-root
 UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /  btrfs  subvol=@,defaults,noatime,compress=zstd,discard=async  0  1
@@ -152,10 +156,6 @@ UUID=d8294c05-4570-4a78-9eaa-382c05d7040d none   swap sw 0 0
 UUID=c2f96f90-db58-4700-abbd-7aff8dd07929 /boot  ext4 defaults 0 1
 # /dev/nvme0n1p1
 UUID=4429-E99B /boot/efi  vfat defaults 0 1
-
-# Snapshots
-UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /.snapshots  btrfs  subvol=@snapshots,defaults,noatime,compress=zstd,discard=async  0  0
-UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /home/.snapshots  btrfs  subvol=@home-snapshots,defaults,noatime,compress=zstd,discard=async  0  0
 ```
 
 File: `/etc/crypttab`
@@ -375,6 +375,70 @@ chmod 755 /etc/initramfs/post-update.d/backup_boot
 ```
 
 > The filename must contain only ASCII uppercase & lowercase letters, digits, underscore, and hyphen. See `man run-parts`.
+
+---
+
+# Configure btrfs snapshots
+
+Snapper automatically creates a `.snapshots` directory inside the directory it's snapshotting.
+For the above config for root it will be at `/.snapshots`.
+But we don't need it as we'll create an empty directory of same name/path for our `@snapshots` subvolume to be mounted at.
+
+Delete the `.snapshots` directory snapper created at `/` and at `/home`
+
+```
+rm -rI /.snapshots
+rm -rI /home/.snapshots
+```
+
+Create the directories anew
+
+```
+mkdir /.snapshots
+mkdir /home/.snapshots
+```
+
+Mount btrfs partition and create new subvolumes
+
+```
+mount -t btrfs /dev/lvmlmde/root /mnt
+btrfs subvolume create /mnt/@snapshots
+btrfs subvolume create /mnt/@home-snapshots
+btrfs subvolume list /mnt
+umount /mnt
+```
+
+Automatically mount the snapshots subvolumes:
+
+File: `/etc/fstab`
+
+Contents:
+
+```
+# Static filesystem information
+tmpfs  /tmp  tmpfs  defaults,noatime  0  0
+# /dev/mapper/lvmlmde-root
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /  btrfs  subvol=@,defaults,noatime,compress=zstd,discard=async  0  1
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /home  btrfs  subvol=@home,defaults,noatime,compress=zstd,discard=async  0  2
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /var/log  btrfs  subvol=@var-log,defaults,noatime,compress=zstd,discard=async  0  2
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /var/cache  btrfs  subvol=@var-cache,defaults,noatime,compress=zstd,discard=async  0  2
+# /dev/mapper/lvmlmde-swap
+UUID=d8294c05-4570-4a78-9eaa-382c05d7040d none   swap sw 0 0
+# /dev/nvme0n1p2
+UUID=c2f96f90-db58-4700-abbd-7aff8dd07929 /boot  ext4 defaults 0 1
+# /dev/nvme0n1p1
+UUID=4429-E99B /boot/efi  vfat defaults 0 1
+
+# Snapshots
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /.snapshots  btrfs  subvol=@snapshots,defaults,noatime,compress=zstd,discard=async  0  0
+UUID=992e4b8c-7de1-4a94-a2cc-079b69bbadd7  /home/.snapshots  btrfs  subvol=@home-snapshots,defaults,noatime,compress=zstd,discard=async  0  0
+```
+
+Mount all partitions listed in `/etc/fstab`:
+
+```
+mount -av
+```
 
 ---
 
