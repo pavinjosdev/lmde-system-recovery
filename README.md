@@ -834,7 +834,7 @@ mv -T @var-cache.latest @var-cache
 
 - Edit `/mnt/@/etc/fstab` with UUID of new boot, EFI, btrfs and swap partitions
 - Edit `/mnt/@/etc/crypttab` with UUID of new LUKS partition
-- Edit `/etc/default/grub` or `/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
+- Edit `/mnt/@/etc/default/grub` or `/mnt/@/etc/default/grub.d/61_live-installer.cfg` with UUID of new LUKS partition
 
 Reboot back into OS.
 
