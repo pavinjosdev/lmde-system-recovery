@@ -373,6 +373,10 @@ nano /etc/snapper/configs/home
 
 Backup non-btrfs partition `/boot` on kernel/initramfs updates
 
+```
+mkdir -p /etc/initramfs/post-update.d
+```
+
 File: `/etc/initramfs/post-update.d/backup_boot`
 
 Contents:
