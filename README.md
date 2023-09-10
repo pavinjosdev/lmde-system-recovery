@@ -137,7 +137,7 @@ mount /dev/nvme0n1p1 /target/boot/efi
 - Chroot into new system:
 
 ```
-for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
+for i in /dev /dev/pts /proc /run /sys; do mount --bind $i /target$i; done
 chroot /target
 ```
 
@@ -861,18 +861,20 @@ mount /dev/nvme0n1p2 /target/boot
 mkdir -p /target/boot/efi
 mount /dev/nvme0n1p1 /target/boot/efi
 
-for i in /dev /dev/pts /proc /run /sys; do mount -B $i /target$i; done
+for i in /dev /dev/pts /proc /run /sys; do mount --bind $i /target$i; done
 chroot /target
 
 mount -av
 
 rsync -a /boot/ /.boot.fresh
-update-grub
-update-initramfs -c -k all
+# if using resolvconf for DNS resolution
+echo 'nameserver 8.8.8.8' > /run/resolvconf/resolv.conf
 
 apt update
 apt purge linux-image-* linux-headers-*
 apt install linux-image-amd64 linux-headers-amd64
+update-grub
+update-initramfs -c -k all
 ```
 
 Reboot back into restored OS.
